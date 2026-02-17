@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Interstellar Transmission Hub — Commander Nova</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;900&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+  <style>
+    :root {
+      --void: #03040f;
+      --deep: #07091a;
+      --mid: #0d1130;
+      --glass: rgba(255,255,255,0.05);
+      --glass-border: rgba(255,255,255,0.1);
+      --blue: #5eb8ff;
+      --teal: #39d9c8;
+      --gold: #ffc85e;
+      --green: #7aefb2;
+      --red: #ff6b8a;
+      --text: #d8e8ff;
+      --muted: rgba(216,232,255,0.5);
+    }
+
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--void);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── STARFIELD ── */
+    #starfield {
+      position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      overflow: hidden;
+    }
+    .star {
+      position: absolute;
+      background: #fff;
+      border-radius: 50%;
+      animation: twinkle var(--dur, 3s) var(--delay, 0s) infinite ease-in-out;
+    }
+    @keyframes twinkle {
+      0%,100% { opacity:.15; transform: scale(1); }
+      50%      { opacity:.9;  transform: scale(1.4); }
+    }
+
+    /* Nebula blobs */
+    .nebula {
+      position: fixed; border-radius: 50%; filter: blur(90px);
+      pointer-events: none; z-index: 0; opacity: .18;
+    }
+    .nebula-1 { width:600px; height:600px; background:#1a3a8f; top:-100px; left:-150px; }
+    .nebula-2 { width:400px; height:400px; background:#0f5e6e; bottom:0; right:-80px; }
+    .nebula-3 { width:300px; height:300px; background:#3a1a6e; top:40%; left:30%; }
+
+    /* ── LAYOUT ── */
+    .container { position:relative; z-index:1; max-width:860px; margin:0 auto; padding:30px 20px 80px; }
+
+    /* ── HEADER ── */
+    header { text-align:center; padding: 40px 0 50px; }
+    .eyebrow {
+      font-family:'Orbitron',monospace; font-size:.65rem; letter-spacing:.3em;
+      color: var(--teal); text-transform:uppercase; margin-bottom:16px;
+      opacity:.8;
+    }
+    h1 {
+      font-family:'Orbitron',monospace; font-weight:900;
+      font-size: clamp(1.6rem,4vw,2.8rem); line-height:1.1;
+      background: linear-gradient(135deg, #ffffff 0%, var(--blue) 50%, var(--teal) 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip:text;
+      margin-bottom:12px;
+    }
+    .subtitle { color: var(--muted); font-size:.95rem; font-weight:300; }
+
+    .stats-row {
+      display:flex; justify-content:center; gap:20px; flex-wrap:wrap; margin-top:30px;
+    }
+    .stat-chip {
+      background: var(--glass); border: 1px solid var(--glass-border);
+      backdrop-filter: blur(12px); padding:12px 22px; border-radius:50px;
+      text-align:center;
+    }
+    .stat-label { font-size:.7rem; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); }
+    .stat-val   { font-family:'Orbitron',monospace; font-size:1.1rem; color:var(--blue); margin-top:3px; }
+
+    /* ── STREAK STAR ── */
+    .streak-wrap {
+      display:flex; flex-direction:column; align-items:center; gap:8px;
+      position:relative;
+    }
+    .star-svg {
+      width:70px; height:70px; position:relative; cursor:default;
+      filter: drop-shadow(0 0 12px rgba(255,200,94,.6));
+      animation: starPulse 3s ease-in-out infinite;
+    }
+    @keyframes starPulse {
+      0%,100%{ filter: drop-shadow(0 0 10px rgba(255,200,94,.5)); transform:scale(1); }
+      50%    { filter: drop-shadow(0 0 22px rgba(255,200,94,.9)); transform:scale(1.06); }
+    }
+    .streak-count {
+      position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+      font-family:'Orbitron',monospace; font-weight:900;
+      font-size:1.1rem; color:#fff;
+      text-shadow: 0 0 8px rgba(0,0,0,.8);
+      pointer-events:none;
+    }
+    .streak-label { font-size:.7rem; letter-spacing:.15em; color:var(--gold); text-transform:uppercase; }
+
+    /* ── SECTION TITLES ── */
+    .section-title {
+      font-family:'Orbitron',monospace; font-size:.75rem;
+      letter-spacing:.25em; text-transform:uppercase;
+      color:var(--teal); margin-bottom:20px;
+      display:flex; align-items:center; gap:10px;
+    }
+    .section-title::after {
+      content:''; flex:1; height:1px; background: linear-gradient(90deg,rgba(57,217,200,.3),transparent);
+    }
+
+    /* ── GLASS CARD ── */
+    .card {
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(14px);
+      border-radius:20px; padding:28px;
+      margin-bottom:24px;
+    }
+    .card:hover { border-color: rgba(94,184,255,.25); }
+
+    /* ── COMPOSE SECTION ── */
+    .compose-card { border-color: rgba(94,184,255,.2); }
+
+    .photo-station {
+      display:grid; grid-template-columns:1fr 1fr; gap:16px;
+      margin-bottom:22px;
+    }
+    @media(max-width:600px){ .photo-station{grid-template-columns:1fr;} }
+
+    .cam-preview {
+      position:relative; border-radius:14px; overflow:hidden;
+      background:#000; aspect-ratio:4/3;
+      border:2px solid rgba(94,184,255,.2);
+    }
+    #camVideo, #camCanvas {
+      width:100%; height:100%; object-fit:cover; display:block;
+    }
+    #camCanvas { display:none; }
+
+    .cam-overlay {
+      position:absolute; bottom:0; left:0; right:0;
+      background: linear-gradient(transparent, rgba(0,0,0,.7));
+      padding:10px 12px;
+      display:flex; align-items:center; justify-content:space-between;
+    }
+    .cam-date {
+      font-family:'Orbitron',monospace; font-size:.6rem;
+      color:rgba(255,255,255,.8); letter-spacing:.08em;
+    }
+    .cam-dot { width:8px; height:8px; border-radius:50%; background:#ff6b8a; animation: blink 1s infinite; }
+    @keyframes blink{ 0%,100%{opacity:1;} 50%{opacity:.2;} }
+
+    .cam-controls { display:flex; flex-direction:column; gap:10px; justify-content:center; }
+
+    .btn {
+      font-family:'DM Sans',sans-serif; font-size:.85rem; font-weight:500;
+      border:none; cursor:pointer; border-radius:50px;
+      padding:10px 20px; transition: all .2s ease;
+      display:flex; align-items:center; gap:7px; justify-content:center;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--blue), var(--teal));
+      color:#000; font-weight:600;
+      box-shadow: 0 4px 20px rgba(94,184,255,.3);
+    }
+    .btn-primary:hover { transform:translateY(-2px); box-shadow: 0 6px 25px rgba(94,184,255,.45); }
+    .btn-ghost {
+      background: var(--glass); color:var(--text);
+      border:1px solid var(--glass-border);
+    }
+    .btn-ghost:hover { background: rgba(255,255,255,.1); transform:translateY(-1px); }
+    .btn-send {
+      background: linear-gradient(135deg, #ff6b8a, #ff9f5e);
+      color:#fff; font-weight:700; font-size:1rem;
+      padding:14px 32px;
+      box-shadow: 0 4px 24px rgba(255,107,138,.4);
+      width:100%;
+    }
+    .btn-send:hover { transform:translateY(-3px); box-shadow: 0 8px 30px rgba(255,107,138,.5); }
+    .btn-send:active { transform:translateY(0); }
+    .btn-send:disabled { opacity:.5; cursor:not-allowed; transform:none; }
+
+    .compose-meta { display:flex; flex-direction:column; gap:14px; }
+
+    label { font-size:.78rem; letter-spacing:.08em; color:var(--muted); display:block; margin-bottom:5px; }
+
+    input[type=text], textarea, select {
+      width:100%; background: rgba(255,255,255,.04);
+      border:1px solid var(--glass-border);
+      color:var(--text); border-radius:12px;
+      padding:12px 16px; font-family:'DM Sans',sans-serif;
+      font-size:.95rem; outline:none; transition:border-color .2s;
+      resize:vertical;
+    }
+    input:focus, textarea:focus, select:focus {
+      border-color: rgba(94,184,255,.5);
+      background: rgba(94,184,255,.05);
+    }
+    textarea { min-height:130px; line-height:1.6; }
+
+    .fact-row { display:grid; grid-template-columns:1fr auto; gap:10px; align-items:end; }
+    .fact-refresh {
+      background:none; border:1px solid var(--glass-border); color:var(--teal);
+      border-radius:10px; padding:12px 14px; cursor:pointer;
+      transition:all .2s; font-size:1rem;
+    }
+    .fact-refresh:hover { background:rgba(57,217,200,.1); border-color:var(--teal); }
+
+    /* ── ROCKET ANIMATION ── */
+    #rocketOverlay {
+      position:fixed; inset:0; z-index:9999;
+      display:none; pointer-events:none;
+    }
+    #rocketOverlay.active { display:block; }
+
+    .rocket-trail {
+      position:absolute; bottom:-60px; left:50%;
+      transform:translateX(-50%);
+      font-size:4rem;
+      animation: rocketLaunch 2.2s ease-in forwards;
+    }
+    @keyframes rocketLaunch {
+      0%   { bottom:-60px; left:50%; transform:translateX(-50%) rotate(0deg); opacity:1; }
+      70%  { bottom:60%; left:55%; transform:translateX(-50%) rotate(-15deg); opacity:1; }
+      100% { bottom:120%; left:65%; transform:translateX(-50%) rotate(-20deg); opacity:0; }
+    }
+
+    .exhaust {
+      position:absolute; bottom:-60px; left:50%;
+      transform:translateX(-50%);
+      width:6px; height:60px;
+      background: linear-gradient(transparent, #ffc85e, #ff6b8a);
+      border-radius:3px;
+      animation: exhaustFade 2.2s ease-in forwards;
+      filter:blur(4px);
+    }
+    @keyframes exhaustFade {
+      0%  { opacity:.9; height:60px; bottom:-60px; left:50%; }
+      70% { opacity:.5; height:120px; bottom:55%; }
+      100%{ opacity:0; }
+    }
+
+    .sent-msg {
+      position:fixed; top:50%; left:50%;
+      transform:translate(-50%,-50%);
+      font-family:'Orbitron',monospace;
+      font-size:1.4rem; color:var(--teal);
+      text-align:center; opacity:0;
+      animation: sentFade 1s ease 1.5s forwards;
+      z-index:9998;
+    }
+    @keyframes sentFade { 0%{opacity:0;transform:translate(-50%,-50%) scale(.8);} 50%{opacity:1;transform:translate(-50%,-50%) scale(1.05);} 100%{opacity:0;transform:translate(-50%,-50%) scale(1.1);} }
+
+    /* ── ARCHIVE ── */
+    .archive-item {
+      display:flex; justify-content:space-between; align-items:center;
+      padding:16px 20px; border-radius:14px;
+      background:rgba(255,255,255,.03); border:1px solid var(--glass-border);
+      margin-bottom:12px; transition:all .25s; cursor:pointer; gap:12px;
+    }
+    .archive-item:hover { background:rgba(94,184,255,.07); border-color:rgba(94,184,255,.25); transform:translateX(4px); }
+    .arc-info h4 { font-weight:500; margin-bottom:4px; }
+    .arc-meta { font-size:.8rem; color:var(--muted); }
+    .arc-btn {
+      font-family:'Orbitron',monospace; font-size:.65rem;
+      letter-spacing:.1em; background:none;
+      border:1px solid rgba(94,184,255,.4); color:var(--blue);
+      padding:7px 14px; border-radius:50px; cursor:pointer;
+      transition:all .2s; white-space:nowrap;
+    }
+    .arc-btn:hover { background:rgba(94,184,255,.1); }
+
+    /* ── TRANSMISSION VIEWER ── */
+    .tx-card {
+      border-color:rgba(122,239,178,.2);
+      animation: fadeUp .5s ease;
+    }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(20px);} to{opacity:1;transform:translateY(0);} }
+
+    .tx-header { display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px; margin-bottom:18px; }
+    .tx-badge {
+      font-family:'Orbitron',monospace; font-size:.65rem; padding:5px 14px;
+      border-radius:50px; background:linear-gradient(135deg,var(--teal),var(--green));
+      color:#000; font-weight:600;
+    }
+    .tx-date { font-size:.85rem; color:var(--muted); }
+    .tx-title { font-size:1.4rem; font-weight:500; color:var(--green); margin-bottom:16px; }
+    .tx-message { line-height:1.75; white-space:pre-line; color:var(--text); margin-bottom:20px; }
+    .tx-photo { width:100%; border-radius:14px; margin:16px 0; border:2px solid rgba(122,239,178,.2); }
+    .tx-fact {
+      background:rgba(122,239,178,.07); border-left:3px solid var(--green);
+      padding:16px; border-radius:0 12px 12px 0; margin-top:16px;
+    }
+    .tx-fact-label { font-size:.7rem; letter-spacing:.15em; color:var(--green); text-transform:uppercase; margin-bottom:8px; }
+
+    /* ── INCOMING REPLY BADGE ── */
+    .reply-badge {
+      display:none; position:fixed; top:20px; right:20px; z-index:500;
+      background:linear-gradient(135deg,#2d6a4f,#1b4332);
+      border:1px solid rgba(122,239,178,.4); border-radius:16px;
+      padding:14px 20px; cursor:pointer;
+      animation: badgeFloat 2s ease-in-out infinite;
+      box-shadow: 0 8px 30px rgba(0,0,0,.4);
+    }
+    .reply-badge.show { display:flex; align-items:center; gap:10px; }
+    @keyframes badgeFloat{ 0%,100%{transform:translateY(0);} 50%{transform:translateY(-5px);} }
+    .badge-icon { font-size:1.4rem; }
+    .badge-text { font-size:.85rem; font-weight:500; color:#7aefb2; }
+
+    /* ── TOAST ── */
+    .toast {
+      position:fixed; bottom:30px; left:50%; transform:translateX(-50%) translateY(20px);
+      background:#1a2a1a; border:1px solid rgba(122,239,178,.4);
+      color:var(--green); padding:12px 24px; border-radius:50px;
+      font-size:.9rem; opacity:0; transition:all .3s; z-index:1000; white-space:nowrap;
+    }
+    .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+    /* ── SCROLLBAR ── */
+    ::-webkit-scrollbar { width:6px; }
+    ::-webkit-scrollbar-track { background:var(--void); }
+    ::-webkit-scrollbar-thumb { background:rgba(94,184,255,.3); border-radius:3px; }
+
+    /* ── LINK ── */
+    .switch-link {
+      text-align:center; margin-top:40px;
+      font-size:.85rem; color:var(--muted);
+    }
+    .switch-link a {
+      color:var(--green); text-decoration:none; border-bottom:1px solid rgba(122,239,178,.3);
+    }
+    .switch-link a:hover { color:#fff; }
+
+    @media(max-width:500px){
+      h1{font-size:1.4rem;}
+      .card{padding:18px;}
+    }
+  </style>
+</head>
+<body>
+
+<!-- Nebula atmosphere -->
+<div class="nebula nebula-1"></div>
+<div class="nebula nebula-2"></div>
+<div class="nebula nebula-3"></div>
+
+<!-- Stars -->
+<div id="starfield"></div>
+
+<!-- Rocket overlay -->
+<div id="rocketOverlay">
+  <div class="exhaust"></div>
+  <div class="rocket-trail">🚀</div>
+</div>
+
+<!-- Sent message flash -->
+<div class="sent-msg" id="sentMsg">TRANSMISSION SENT ✦</div>
+
+<!-- Reply badge (shown when reply exists in localStorage) -->
+<div class="reply-badge" id="replyBadge" onclick="showReply()">
+  <div class="badge-icon">🌿</div>
+  <div class="badge-text">New reply from Earth Base 🌍</div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<div class="container">
+
+  <!-- HEADER -->
+  <header>
+    <div class="eyebrow">Interstellar Transmission Hub</div>
+    <h1>Commander Nova's Bridge</h1>
+    <p class="subtitle">Sending love across the cosmos — one transmission at a time</p>
+
+    <div class="stats-row">
+      <div class="stat-chip">
+        <div class="stat-label">Commander</div>
+        <div class="stat-val" id="cmdName">Commander Nova</div>
+      </div>
+      <div class="stat-chip">
+        <div class="stat-label">Days Since Launch</div>
+        <div class="stat-val" id="dayCount">—</div>
+      </div>
+      <div class="streak-wrap stat-chip">
+        <div style="position:relative; display:inline-block;">
+          <svg class="star-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <polygon points="50,5 61,35 95,35 68,57 79,91 50,70 21,91 32,57 5,35 39,35"
+              fill="#ffc85e" opacity=".9"/>
+            <polygon points="50,15 59,38 84,38 64,53 72,78 50,63 28,78 36,53 16,38 41,38"
+              fill="#ffe09e" opacity=".6"/>
+          </svg>
+          <span class="streak-count" id="streakNum">0</span>
+        </div>
+        <div class="streak-label">Day Streak 🔥</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ═══ COMPOSE SECTION ═══ -->
+  <div class="section-title">📡 New Transmission</div>
+
+  <div class="card compose-card">
+
+    <!-- Photo Station -->
+    <div style="margin-bottom:10px;">
+      <label>📸 Photo Station — Captured at Mission Time</label>
+    </div>
+    <div class="photo-station">
+      <div class="cam-preview">
+        <video id="camVideo" autoplay playsinline muted></video>
+        <canvas id="camCanvas"></canvas>
+        <div class="cam-overlay">
+          <span class="cam-date" id="camDate">--.--.----</span>
+          <span class="cam-dot"></span>
+        </div>
+      </div>
+      <div class="cam-controls">
+        <button class="btn btn-primary" onclick="startCamera()" id="btnStartCam">▶ Start Camera</button>
+        <button class="btn btn-ghost" onclick="capturePhoto()" id="btnCapture" disabled>📸 Capture Photo</button>
+        <button class="btn btn-ghost" onclick="retakePhoto()" id="btnRetake" style="display:none;">↺ Retake</button>
+        <p id="camStatus" style="font-size:.75rem; color:var(--muted); text-align:center; line-height:1.4;">
+          Camera adds your face & timestamp to the transmission
+        </p>
+      </div>
+    </div>
+
+    <!-- Compose fields -->
+    <div class="compose-meta">
+      <div>
+        <label>✨ Transmission Title</label>
+        <input type="text" id="txTitle" placeholder="e.g. Navigating the Andromeda Rift…"/>
+      </div>
+      <div>
+        <label>💬 Your Message to Commander</label>
+        <textarea id="txMessage" placeholder="Hey little brother! 🚀&#10;&#10;Today something incredible happened…"></textarea>
+      </div>
+      <div>
+        <label>🌌 Space Fact of the Day</label>
+        <div class="fact-row">
+          <input type="text" id="txFact" placeholder="Share a space fact…"/>
+          <button class="fact-refresh" onclick="randomFact()" title="Random fact">⟳</button>
+        </div>
+      </div>
+      <button class="btn btn-send" id="sendBtn" onclick="sendTransmission()">
+        🚀 &nbsp; LAUNCH TRANSMISSION
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══ TRANSMISSION VIEWER ═══ -->
+  <div id="txViewer" style="display:none;"></div>
+
+  <!-- ═══ ARCHIVE ═══ -->
+  <div id="archiveWrap" style="display:none;">
+    <div class="section-title">📚 Transmission Archive</div>
+    <div id="archiveList"></div>
+  </div>
+
+  <!-- ═══ REPLY VIEWER ═══ -->
+  <div id="replyViewer" style="display:none;">
+    <div class="section-title">🌿 Reply from Earth Base</div>
+  </div>
+
+  <div class="switch-link">
+    <a href="brother.html">→ Switch to Brother's Earth Base Terminal</a>
+  </div>
+
+</div>
+
+<script>
+// ── EMAILJS CONFIG ── (replace with your real keys from emailjs.com)
+const EMAILJS_PUBLIC_KEY  = 'YOUR_PUBLIC_KEY';
+const EMAILJS_SERVICE_ID  = 'YOUR_SERVICE_ID';
+const EMAILJS_TEMPLATE_ID = 'YOUR_TEMPLATE_ID'; // for brother's email
+emailjs.init(EMAILJS_PUBLIC_KEY);
+
+// ── FACTS POOL ──
+const SPACE_FACTS = [
+  "A day on Venus is longer than a year on Venus — it rotates so slowly.",
+  "Neutron stars can spin 600 times per second.",
+  "There are more stars in the universe than grains of sand on Earth.",
+  "The footprints on the Moon could last 100 million years — there's no wind.",
+  "Saturn's rings are mostly ice chunks, some as small as sugar grains.",
+  "One million Earths could fit inside the Sun.",
+  "Space is completely silent — sound needs a medium to travel through.",
+  "The International Space Station travels at 28,000 km/h.",
+  "Light from the Sun takes about 8 minutes to reach Earth.",
+  "Olympus Mons on Mars is 3× taller than Mount Everest.",
+];
+
+// ── STATE ──
+let capturedPhotoDataURL = null;
+let stream = null;
+let logs = JSON.parse(localStorage.getItem('sis_logs') || '[]');
+let streak = parseInt(localStorage.getItem('sis_streak') || '0');
+let launchDate = localStorage.getItem('sis_launch') || new Date().toISOString().split('T')[0];
+
+// ── INIT ──
+document.addEventListener('DOMContentLoaded', () => {
+  createStars();
+  updateCamDate();
+  setInterval(updateCamDate, 1000);
+  document.getElementById('dayCount').textContent = daysSince(launchDate);
+  document.getElementById('streakNum').textContent = streak;
+  randomFact();
+  renderArchive();
+  checkForReply();
+  if (logs.length > 0) showTransmission(logs[0], true);
+});
+
+// ── STARFIELD ──
+function createStars() {
+  const c = document.getElementById('starfield');
+  for (let i = 0; i < 80; i++) {
+    const s = document.createElement('div');
+    s.className = 'star';
+    const sz = Math.random() * 2.5 + .5;
+    s.style.cssText = `width:${sz}px;height:${sz}px;top:${Math.random()*100}%;left:${Math.random()*100}%;--dur:${2+Math.random()*4}s;--delay:${Math.random()*4}s;`;
+    c.appendChild(s);
+  }
+}
+
+// ── CAMERA ──
+async function startCamera() {
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode:'user' }, audio:false });
+    document.getElementById('camVideo').srcObject = stream;
+    document.getElementById('btnStartCam').disabled = true;
+    document.getElementById('btnCapture').disabled = false;
+    document.getElementById('camStatus').textContent = 'Camera active — smile! 📡';
+  } catch(e) {
+    document.getElementById('camStatus').textContent = '⚠ Camera access denied. Transmission will send without photo.';
+  }
+}
+
+function capturePhoto() {
+  const video  = document.getElementById('camVideo');
+  const canvas = document.getElementById('camCanvas');
+  canvas.width  = video.videoWidth  || 640;
+  canvas.height = video.videoHeight || 480;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0);
+
+  // Stamp date
+  const now = new Date();
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  ctx.fillRect(0, canvas.height-36, canvas.width, 36);
+  ctx.fillStyle = '#7aefb2';
+  ctx.font = 'bold 14px monospace';
+  ctx.fillText('MISSION LOG  ' + now.toLocaleString(), 10, canvas.height-12);
+
+  capturedPhotoDataURL = canvas.toDataURL('image/jpeg', 0.7);
+
+  // Show canvas, hide video
+  video.style.display = 'none';
+  canvas.style.display = 'block';
+  document.getElementById('btnCapture').style.display = 'none';
+  document.getElementById('btnRetake').style.display = 'flex';
+  document.getElementById('camStatus').textContent = '✓ Photo captured & stamped!';
+
+  if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+}
+
+function retakePhoto() {
+  capturedPhotoDataURL = null;
+  const video  = document.getElementById('camVideo');
+  const canvas = document.getElementById('camCanvas');
+  video.style.display = 'block';
+  canvas.style.display = 'none';
+  document.getElementById('btnCapture').style.display = 'flex';
+  document.getElementById('btnRetake').style.display = 'none';
+  document.getElementById('btnStartCam').disabled = false;
+  document.getElementById('camStatus').textContent = 'Camera ready to restart.';
+}
+
+function updateCamDate() {
+  const d = new Date();
+  document.getElementById('camDate').textContent =
+    d.toLocaleDateString('en-GB') + '  ' + d.toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'});
+}
+
+// ── RANDOM FACT ──
+function randomFact() {
+  document.getElementById('txFact').value = SPACE_FACTS[Math.floor(Math.random() * SPACE_FACTS.length)];
+}
+
+// ── SEND TRANSMISSION ──
+async function sendTransmission() {
+  const title   = document.getElementById('txTitle').value.trim();
+  const message = document.getElementById('txMessage').value.trim();
+  const fact    = document.getElementById('txFact').value.trim();
+
+  if (!title || !message) { showToast('⚠ Please add a title and message!'); return; }
+
+  const btn = document.getElementById('sendBtn');
+  btn.disabled = true;
+  btn.textContent = '📡 Transmitting…';
+
+  const log = {
+    id: String(logs.length + 1).padStart(3,'0'),
+    date: new Date().toISOString().split('T')[0],
+    dateDisplay: new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}),
+    title, message, space_fact: fact,
+    photo: capturedPhotoDataURL || null,
+  };
+
+  // Save locally
+  logs.unshift(log);
+  localStorage.setItem('sis_logs', JSON.stringify(logs));
+
+  // Update streak
+  const today = new Date().toDateString();
+  const lastSent = localStorage.getItem('sis_last_sent');
+  if (lastSent !== today) {
+    streak++;
+    localStorage.setItem('sis_streak', streak);
+    localStorage.setItem('sis_last_sent', today);
+    document.getElementById('streakNum').textContent = streak;
+  }
+
+  // Signal brother
+  localStorage.setItem('bro_pending', JSON.stringify(log));
+
+  // EmailJS send
+  try {
+    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+      to_name: 'Commander',
+      from_name: 'Commander Nova / Big Sister',
+      subject: `🚀 Transmission #${log.id}: ${title}`,
+      message: message,
+      space_fact: fact,
+      log_id: log.id,
+      date: log.dateDisplay,
+    });
+  } catch(e) {
+    console.warn('EmailJS not configured yet — message saved locally.', e);
+  }
+
+  // Rocket animation
+  const overlay = document.getElementById('rocketOverlay');
+  overlay.classList.add('active');
+  setTimeout(() => {
+    overlay.classList.remove('active');
+    document.getElementById('sentMsg').style.animation = 'none';
+    void document.getElementById('sentMsg').offsetWidth;
+    document.getElementById('sentMsg').style.animation = '';
+    btn.disabled = false;
+    btn.innerHTML = '🚀 &nbsp; LAUNCH TRANSMISSION';
+    document.getElementById('txTitle').value = '';
+    document.getElementById('txMessage').value = '';
+    capturedPhotoDataURL = null;
+    retakePhoto();
+    randomFact();
+    renderArchive();
+    showTransmission(log, true);
+    showToast('✦ Transmission launched successfully!');
+  }, 2400);
+}
+
+// ── SHOW TRANSMISSION ──
+function showTransmission(log, isLatest = false) {
+  const v = document.getElementById('txViewer');
+  const photoHTML = log.photo
+    ? `<img src="${log.photo}" class="tx-photo" alt="Mission photo"/>`
+    : '';
+  v.innerHTML = `
+    <div class="section-title">${isLatest ? '📡 Latest Transmission' : '📖 Archived Transmission'}</div>
+    <div class="card tx-card">
+      <div class="tx-header">
+        <span class="tx-badge">${isLatest ? 'LATEST' : 'LOG'} #${log.id}</span>
+        <span class="tx-date">${log.dateDisplay || log.date}</span>
+      </div>
+      <div class="tx-title">${log.title}</div>
+      ${photoHTML}
+      <div class="tx-message">${log.message}</div>
+      ${log.space_fact ? `<div class="tx-fact"><div class="tx-fact-label">🌌 Space Fact</div>${log.space_fact}</div>` : ''}
+    </div>`;
+  v.style.display = 'block';
+  v.scrollIntoView({ behavior:'smooth', block:'nearest' });
+}
+
+// ── ARCHIVE ──
+function renderArchive() {
+  const wrap = document.getElementById('archiveWrap');
+  const list = document.getElementById('archiveList');
+  if (logs.length === 0) { wrap.style.display = 'none'; return; }
+  list.innerHTML = logs.map((log, i) => `
+    <div class="archive-item" onclick="showTransmission(logs[${i}])">
+      <div class="arc-info">
+        <h4>${log.title}</h4>
+        <div class="arc-meta">LOG #${log.id} &nbsp;·&nbsp; ${log.dateDisplay || log.date}</div>
+      </div>
+      <button class="arc-btn">Open ↗</button>
+    </div>`).join('');
+  wrap.style.display = 'block';
+}
+
+// ── CHECK FOR BROTHER'S REPLY ──
+function checkForReply() {
+  const reply = localStorage.getItem('bro_reply');
+  if (reply) {
+    document.getElementById('replyBadge').classList.add('show');
+  }
+}
+
+function showReply() {
+  const raw = localStorage.getItem('bro_reply');
+  if (!raw) return;
+  const reply = JSON.parse(raw);
+  const v = document.getElementById('replyViewer');
+  v.style.display = 'block';
+  v.innerHTML = `
+    <div class="section-title">🌿 Reply from Earth Base</div>
+    <div class="card" style="border-color:rgba(122,239,178,.25);">
+      <div class="tx-header">
+        <span class="tx-badge" style="background:linear-gradient(135deg,#2d6a4f,#52b788);">EARTH REPLY</span>
+        <span class="tx-date">${reply.dateDisplay || reply.date}</span>
+      </div>
+      <div class="tx-title" style="color:var(--green);">${reply.title}</div>
+      ${reply.photo ? `<img src="${reply.photo}" class="tx-photo" alt="Reply photo"/>` : ''}
+      <div class="tx-message">${reply.message}</div>
+      ${reply.eco_fact ? `<div class="tx-fact"><div class="tx-fact-label">🌿 Eco Fact</div>${reply.eco_fact}</div>` : ''}
+    </div>`;
+  document.getElementById('replyBadge').classList.remove('show');
+  localStorage.removeItem('bro_reply');
+  v.scrollIntoView({ behavior:'smooth' });
+}
+
+// ── UTILS ──
+function daysSince(dateStr) {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  return Math.max(1, Math.ceil(diff / 86400000));
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3200);
+}
+</script>
+</body>
+</html>
